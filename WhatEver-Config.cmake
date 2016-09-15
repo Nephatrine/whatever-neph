@@ -104,10 +104,15 @@ endfunction()
 #
 
 function(we_config_require_standard LANG STD)
-	set(CMAKE_${LANG}_STANDARD ${STD})
-	set(CMAKE_${LANG}_STANDARD_REQUIRED ON)
+	set(CMAKE_${LANG}_STANDARD ${STD}
+		PARENT_SCOPE)
+
 	if(MSVC)
-		set(CMAKE_${LANG}_STANDARD_REQUIRED OFF)
+		set(CMAKE_${LANG}_STANDARD_REQUIRED OFF
+			PARENT_SCOPE)
+	else()
+		set(CMAKE_${LANG}_STANDARD_REQUIRED ON
+			PARENT_SCOPE)
 	endif()
 endfunction()
 
