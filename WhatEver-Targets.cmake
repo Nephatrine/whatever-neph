@@ -36,12 +36,8 @@ function(we_target_add_cflags)
 			list(APPEND SELECTED_TARGETS ${arg})
 
 		# cflag lists
-		elseif("${FUNC_MODE}" STREQUAL "PUBLIC")
-			list(APPEND PUBLIC_CLFAGS ${arg})
-		elseif("${FUNC_MODE}" STREQUAL "PRIVATE")
-			list(APPEND PRIVATE_CFLAGS ${arg})
-		elseif("${FUNC_MODE}" STREQUAL "INTERFACE")
-			list(APPEND INTERFACE_CFLAGS ${arg})
+		else()
+			list(APPEND "${FUNC_MODE}_CFLAGS" ${arg})
 		endif()
 	endforeach()
 
@@ -78,21 +74,17 @@ function(we_target_add_defines)
 			list(APPEND SELECTED_TARGETS ${arg})
 
 		# define lists
-		elseif("${FUNC_MODE}" STREQUAL "PUBLIC")
-			list(APPEND PUBLIC_CLFAGS ${arg})
-		elseif("${FUNC_MODE}" STREQUAL "PRIVATE")
-			list(APPEND PRIVATE_CFLAGS ${arg})
-		elseif("${FUNC_MODE}" STREQUAL "INTERFACE")
-			list(APPEND INTERFACE_CFLAGS ${arg})
+		else()
+			list(APPEND "${FUNC_MODE}_DEFINES" ${arg})
 		endif()
 	endforeach()
 
 	# add defines to each target
 	foreach(target ${SELECTED_TARGETS})
 		target_compile_definitions(${target}
-			PRIVATE ${PRIVATE_CFLAGS}
-			PUBLIC ${PUBLIC_CFLAGS}
-			INTERFACE ${INTERFACE_CFLAGS})
+			PRIVATE ${PRIVATE_DEFINES}
+			PUBLIC ${PUBLIC_DEFINES}
+			INTERFACE ${INTERFACE_DEFINES})
 	endforeach()
 endfunction()
 
@@ -135,6 +127,44 @@ function(we_target_add_ldflags)
 endfunction()
 
 # ------------------------------
+# we_target_add_libraries
+# link extra libraries
+#
+
+function(we_target_add_libraries)
+	set(FUNC_MODE TARGET)
+	foreach(arg ${ARGN})
+
+		# control words
+		if("${arg}" STREQUAL "TARGETS")
+			set(FUNC_MODE TARGET)
+		elseif("${arg}" STREQUAL "PUBLIC")
+			set(FUNC_MODE PUBLIC)
+		elseif("${arg}" STREQUAL "PRIVATE")
+			set(FUNC_MODE PRIVATE)
+		elseif("${arg}" STREQUAL "INTERFACE")
+			set(FUNC_MODE INTERFACE)
+
+		#target list
+		elseif("${FUNC_MODE}" STREQUAL "TARGET")
+			list(APPEND SELECTED_TARGETS ${arg})
+
+		# library list
+		else()
+			list(APPEND "${FUNC_MODE}_LIBS" ${arg})
+		endif()
+	endforeach()
+
+	# add libraries to each target
+	foreach(target ${SELECTED_TARGETS})
+		target_link_libraries(${target}
+			PRIVATE ${PRIVATE_LIBS}
+			PUBLIC ${PUBLIC_LIBS}
+			INTERFACE ${INTERFACE_LIBS})
+	endforeach()
+endfunction()
+
+# ------------------------------
 # we_target_add_paths
 # add inclusion paths to search for headers
 #
@@ -162,7 +192,7 @@ function(we_target_add_paths)
 			set(FUNC_PATH _INTERNAL)
 		elseif("${arg}" STREQUAL "EXTERNAL")
 			set(FUNC_PATH _EXTERNAL)
-		elseif("${arg}" STREQUAL "INSTALL_TAG")
+		elseif("${arg}" STREQUAL "TAG")
 			set(FUNC_MODE TAG)
 
 		# make install directory unique
@@ -188,14 +218,7 @@ function(we_target_add_paths)
 				endif()
 			endif()
 
-			# path lists
-			if("${FUNC_MODE}" STREQUAL "PUBLIC")
-				list(APPEND "PUBLIC_PATHS${FUNC_PATH}" ${arg})
-			elseif("${FUNC_MODE}" STREQUAL "PRIVATE")
-				list(APPEND "PRIVATE_PATHS${FUNC_PATH}" ${arg})
-			elseif("${FUNC_MODE}" STREQUAL "INTERFACE")
-				list(APPEND "INTERFACE_PATHS${FUNC_PATH}" ${arg})
-			endif()
+			list(APPEND "${FUNC_MODE}_PATHS${FUNC_PATH}" ${arg})
 		endif()
 	endforeach()
 
@@ -233,6 +256,56 @@ function(we_target_add_paths)
 endfunction()
 
 # ------------------------------
+# we_target_build_executable
+# builds an executable program
+#
+
+set(CPACK_COMPONENT_BINARY_DISPLAY_NAME "Executable(s)")
+set(CPACK_COMPONENT_BINARY_GROUP bin)
+
+function(we_target_build_executable VAR executable)
+	# get source files
+	set(FUNC_MODE SOURCE)
+	foreach(arg ${ARGN})
+
+		# control words
+		if("${arg}" STREQUAL "SOURCE")
+			set(FUNC_MODE SOURCE)
+		elseif("${arg}" STREQUAL "LIBS")
+			set(FUNC_MODE LIBS)
+
+		#get lists
+		elseif("${FUNC_MODE}" STREQUAL "SOURCE")
+			list(APPEND TARG_SOURCE ${arg})
+		elseif("${FUNC_MODE}" STREQUAL "LIBS")
+			list(APPEND TARG_LIBS ${arg})
+		endif()
+	endforeach()
+
+	# configure executable
+	set(TARG_NAME ${executable})
+	add_executable(${TARG_NAME} ${TARG_SOURCE})
+	set_target_properties(${TARG_NAME} PROPERTIES
+		OUTPUT_NAME ${executable}
+		INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+
+	# link in external libraries
+	if(TARG_LIBS)
+		target_link_libraries(${TARG_NAME} PRIVATE ${TARG_LIBS})
+	endif()
+
+	# install target
+	install(TARGETS ${TARG_NAME}
+		COMPONENT binary
+		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+	set("${VAR}_PROGRAM" ${${VAR}_PROGRAM} ${TARG_NAME}
+		PARENT_SCOPE)
+	set(${VAR} ${${VAR}} ${TARG_NAME}
+		PARENT_SCOPE)
+endfunction()
+
+# ------------------------------
 # we_target_build_library
 # builds a library target
 #
@@ -255,10 +328,14 @@ function(we_target_build_library VAR library soversion)
 			set(FUNC_MODE EXPORT)
 		elseif("${arg}" STREQUAL "TAG")
 			set(FUNC_MODE TAG)
+		elseif("${arg}" STREQUAL "TAG")
+			set(FUNC_MODE LIBS)
 
 		# get lists
 		elseif("${FUNC_MODE}" STREQUAL "SOURCE")
 			list(APPEND TARG_SOURCE ${arg})
+		elseif("${FUNC_MODE}" STREQUAL "LIBS")
+			list(APPEND TARG_LIBS ${arg})
 		elseif("${FUNC_MODE}" STREQUAL "EXPORT")
 			list(APPEND TARG_INCLUDE ${arg})
 			if(NOT TARG_EXPORT)
@@ -313,6 +390,11 @@ function(we_target_build_library VAR library soversion)
 			LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 			ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
+		# link libraries
+		if(TARG_LIBS)
+			target_link_libraries(${TARG_NAME} PUBLIC ${TARG_LIBS})
+		endif()
+
 		list(APPEND TARG_ALL ${TARG_STATIC})
 		set("${VAR}_STATIC" ${${VAR}_STATIC} ${TARG_STATIC}
 			PARENT_SCOPE)
@@ -346,6 +428,11 @@ function(we_target_build_library VAR library soversion)
 			RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 			LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 			ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+		# link libraries
+		if(TARG_LIBS)
+			target_link_libraries(${TARG_NAME} PRIVATE ${TARG_LIBS})
+		endif()
 
 		list(APPEND TARG_ALL ${TARG_SHARED})
 		set("${VAR}_SHARED" ${${VAR}_SHARED} ${TARG_SHARED}
