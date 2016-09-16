@@ -1,6 +1,16 @@
 include(GenerateExportHeader)
 include(GNUInstallDirs)
 
+set(CMAKE_DEBUG_POSTFIX _d)
+set(CMAKE_SKIP_BUILD_RPATH  FALSE)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}" isSystemDir)
+if("${isSystemDir}" STREQUAL "-1")
+	set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+endif()
+
 # ------------------------------
 # we_target_add_cflags
 # add compiler options
@@ -129,7 +139,7 @@ endfunction()
 # add inclusion paths to search for headers
 #
 
-set(CPACK_COMPONENT_HEADERS_DEPENDS lic)
+set(CPACK_COMPONENT_HEADERS_DEPENDS license)
 set(CPACK_COMPONENT_HEADERS_DISPLAY_NAME "Header Files")
 set(CPACK_COMPONENT_HEADERS_GROUP dev)
 
@@ -227,6 +237,13 @@ endfunction()
 # builds a library target
 #
 
+set(CPACK_COMPONENT_SHARED_DISPLAY_NAME "Shared Library")
+set(CPACK_COMPONENT_SHARED_GROUP bin)
+
+set(CPACK_COMPONENT_STATIC_DEPENDS headers)
+set(CPACK_COMPONENT_STATIC_DISPLAY_NAME "Static Library")
+set(CPACK_COMPONENT_STATIC_GROUP dev)
+
 function(we_target_build_library VAR library soversion)
 	set(FUNC_MODE SOURCE)
 	foreach(arg ${ARGN})
@@ -277,7 +294,7 @@ function(we_target_build_library VAR library soversion)
 		# avoid conflicts between static lib and shared import lib names
 		if(MSVC)
 			set_target_properties(${TARG_STATIC} PROPERTIES
-				OUTPUT_NAME "${library}-${soversion}${TARG_TAG}-static"
+				OUTPUT_NAME "${library}-${soversion}${TARG_TAG}_s"
 				INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
 		else()
 			set_target_properties(${TARG_STATIC} PROPERTIES
@@ -337,14 +354,36 @@ function(we_target_build_library VAR library soversion)
 
 	# generate export header
 	if(TARG_EXPORT)
+		string(TOLOWER "${library}" TARG_LOWER)
 		string(REGEX REPLACE "^${CMAKE_CURRENT_BINARY_DIR}" "" TARG_EXPORT ${TARG_EXPORT})
 		set(TARG_EXPORT "${CMAKE_CURRENT_BINARY_DIR}/${TARG_EXPORT}")
 		generate_export_header(${library} BASE_NAME ${library}
-			EXPORT_FILE_NAME "${TARG_EXPORT}/${library}_api.h")
+			EXPORT_FILE_NAME "${TARG_EXPORT}/${TARG_LOWER}_api.h")
 		we_target_add_paths(${TARG_ALL} PUBLIC ${TARG_INCLUDE} INSTALL_TAG ${TARG_TAG})
 	endif()
 
 	set(${VAR} ${${VAR}} ${TARG_ALL}
 		PARENT_SCOPE)
+endfunction()
+
+# ------------------------------
+# we_target_export
+# exports cmake targets
+#
+
+set(CPACK_COMPONENT_EXPORT_DISPLAY_NAME "CMake Package")
+set(CPACK_COMPONENT_EXPORT_GROUP dev)
+
+function(we_target_export)
+	# Install Directory
+	install(EXPORT ${PROJECT_NAME}
+		FILE "${PROJECT_NAME}${ARGV0}Config.cmake"
+		DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}${ARGV0}"
+		COMPONENT export)
+
+	# Build Directory
+	export(EXPORT ${PROJECT_NAME}
+		FILE "${PROJECT_NAME}${ARGV0}Config.cmake")
+	export(PACKAGE ${PROJECT_NAME}${ARGV0})
 endfunction()
 
