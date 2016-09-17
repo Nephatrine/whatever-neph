@@ -446,7 +446,7 @@ function(we_target_build_library VAR library soversion)
 		set(TARG_EXPORT "${CMAKE_CURRENT_BINARY_DIR}/${TARG_EXPORT}")
 		generate_export_header(${library} BASE_NAME ${library}
 			EXPORT_FILE_NAME "${TARG_EXPORT}/${TARG_LOWER}_api.h")
-		we_target_add_paths(${TARG_ALL} PUBLIC ${TARG_INCLUDE} INSTALL_TAG ${TARG_TAG})
+		we_target_add_paths(${TARG_ALL} PUBLIC ${TARG_INCLUDE} TAG ${TARG_TAG})
 	endif()
 
 	set(${VAR} ${${VAR}} ${TARG_ALL}
