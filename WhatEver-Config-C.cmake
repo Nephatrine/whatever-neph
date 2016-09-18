@@ -7,6 +7,8 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
+set(WHATEVER_HAVE_CONFIG ON)
+
 # ------------------------------
 # MSVC Default Options
 # because even MSVC needs some love...
