@@ -25,7 +25,7 @@ set(WHATEVER_HAVE_PACKAGE ON)
 # detect target architecture
 #
 
-function(we_config_detect_arch VAR)
+function(we_package_detect_arch VAR)
 	try_run(run_result_unused compile_result_unused
 		${CMAKE_CURRENT_BINARY_DIR}
 		"${WHATEVER_CMAKE_DIR}/Tools/detect-arch.c"
@@ -138,7 +138,7 @@ function(we_package)
 	set(CPACK_SOURCE_GENERATOR ${WHATEVER_SOURCE_GENERATOR})
 
 	# Binary Package
-	we_config_detect_arch(WHATEVER_SYSTEM_ARCH)
+	we_package_detect_arch(WHATEVER_SYSTEM_ARCH)
 	set(CPACK_PACKAGE_NAME "${PROJECT_NAME}${FUNC_TAG}")
 	set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 	set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
