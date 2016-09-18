@@ -11,6 +11,11 @@ if("${isSystemDir}" STREQUAL "-1")
 	set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 endif()
 
+set(CPACK_COMPONENT_GROUP_BIN_DISPLAY_NAME "End-User")
+set(CPACK_COMPONENT_GROUP_DEV_DISPLAY_NAME "Developer")
+
+set(WHATEVER_HAVE_TARGETS ON)
+
 # ------------------------------
 # we_target_add_cflags
 # add compiler options
@@ -37,7 +42,7 @@ function(we_target_add_cflags)
 
 		# cflag lists
 		else()
-			list(APPEND "${FUNC_MODE}_CFLAGS" ${arg})
+			list(APPEND ${FUNC_MODE}_CFLAGS ${arg})
 		endif()
 	endforeach()
 
@@ -75,7 +80,7 @@ function(we_target_add_defines)
 
 		# define lists
 		else()
-			list(APPEND "${FUNC_MODE}_DEFINES" ${arg})
+			list(APPEND ${FUNC_MODE}_DEFINES ${arg})
 		endif()
 	endforeach()
 
@@ -151,7 +156,7 @@ function(we_target_add_libraries)
 
 		# library list
 		else()
-			list(APPEND "${FUNC_MODE}_LIBS" ${arg})
+			list(APPEND ${FUNC_MODE}_LIBS ${arg})
 		endif()
 	endforeach()
 
@@ -218,7 +223,7 @@ function(we_target_add_paths)
 				endif()
 			endif()
 
-			list(APPEND "${FUNC_MODE}_PATHS${FUNC_PATH}" ${arg})
+			list(APPEND ${FUNC_MODE}_PATHS${FUNC_PATH} ${arg})
 		endif()
 	endforeach()
 
@@ -299,7 +304,7 @@ function(we_target_build_executable VAR executable)
 		COMPONENT binary
 		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-	set("${VAR}_PROGRAM" ${${VAR}_PROGRAM} ${TARG_NAME}
+	set(${VAR}_PROGRAM ${${VAR}_PROGRAM} ${TARG_NAME}
 		PARENT_SCOPE)
 	set(${VAR} ${${VAR}} ${TARG_NAME}
 		PARENT_SCOPE)
@@ -328,7 +333,7 @@ function(we_target_build_library VAR library soversion)
 			set(FUNC_MODE EXPORT)
 		elseif("${arg}" STREQUAL "TAG")
 			set(FUNC_MODE TAG)
-		elseif("${arg}" STREQUAL "TAG")
+		elseif("${arg}" STREQUAL "LIBS")
 			set(FUNC_MODE LIBS)
 
 		# get lists
@@ -396,7 +401,7 @@ function(we_target_build_library VAR library soversion)
 		endif()
 
 		list(APPEND TARG_ALL ${TARG_STATIC})
-		set("${VAR}_STATIC" ${${VAR}_STATIC} ${TARG_STATIC}
+		set(${VAR}_STATIC ${${VAR}_STATIC} ${TARG_STATIC}
 			PARENT_SCOPE)
 	endif()
 
@@ -435,7 +440,7 @@ function(we_target_build_library VAR library soversion)
 		endif()
 
 		list(APPEND TARG_ALL ${TARG_SHARED})
-		set("${VAR}_SHARED" ${${VAR}_SHARED} ${TARG_SHARED}
+		set(${VAR}_SHARED ${${VAR}_SHARED} ${TARG_SHARED}
 			PARENT_SCOPE)
 	endif()
 
@@ -472,5 +477,115 @@ function(we_target_export)
 	export(EXPORT ${PROJECT_NAME}
 		FILE "${PROJECT_NAME}${ARGV0}Config.cmake")
 	export(PACKAGE ${PROJECT_NAME}${ARGV0})
+endfunction()
+
+# ------------------------------
+# we_target_list_license
+# set list of license files
+#
+
+set(CPACK_COMPONENT_LICENSE_DISPLAY_NAME "License")
+set(CPACK_COMPONENT_LICENSE_GROUP dev)
+
+function(we_target_list_license)
+	foreach(arg ${ARGN})
+		# make sure we don't double up on these paths
+		string(REGEX REPLACE "^${CMAKE_CURRENT_BINARY_DIR}" "" arg ${arg})
+		string(REGEX REPLACE "^${CMAKE_CURRENT_SOURCE_DIR}" "" arg ${arg})
+
+		# check if it is a directory and where it is located
+		if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${arg}")
+			if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${arg}")
+				file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${arg}")
+				install(DIRECTORY
+					"${CMAKE_CURRENT_SOURCE_DIR}/${arg}/"
+					"${CMAKE_CURRENT_BINARY_DIR}/${arg}/"
+					DESTINATION ${CMAKE_INSTALL_DOCDIR}
+					COMPONENT license)
+			else()
+				install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/${arg}"
+					DESTINATION ${CMAKE_INSTALL_DOCDIR}
+					COMPONENT license)
+			endif()
+		else()
+			if(IS_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${arg}")
+				install(DIRECTORY
+					"${CMAKE_CURRENT_BINARY_DIR}/${arg}/"
+					DESTINATION ${CMAKE_INSTALL_DOCDIR}
+					COMPONENT license)
+			else()
+				install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${arg}"
+					DESTINATION ${CMAKE_INSTALL_DOCDIR}
+					COMPONENT license)
+				list(APPEND TARG_DOCS "${CMAKE_CURRENT_BINARY_DIR}/${arg}")
+			endif()
+		endif()
+	endforeach()
+
+	# cpack variables
+	if(TARG_DOCS)
+		list(GET TARG_DOCS 0 TARG_FIRST)
+		if(NOT DEFINED CPACK_RESOURCE_FILE_LICENSE)
+			set(CPACK_RESOURCE_FILE_LICENSE ${TARG_FIRST}
+				PARENT_SCOPE)
+		endif()
+	endif()
+endfunction()
+
+# ------------------------------
+# we_target_list_docs
+# set list of documents
+#
+
+set(CPACK_COMPONENT_DOC_DISPLAY_NAME "Documentation")
+
+function(we_target_list_docs)
+	foreach(arg ${ARGN})
+		# make sure we don't double up on these paths
+		string(REGEX REPLACE "^${CMAKE_CURRENT_BINARY_DIR}" "" arg ${arg})
+		string(REGEX REPLACE "^${CMAKE_CURRENT_SOURCE_DIR}" "" arg ${arg})
+
+		# check if it is a directory and where it is located
+		if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${arg}")
+			if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${arg}")
+				file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${arg}")
+				install(DIRECTORY
+					"${CMAKE_CURRENT_SOURCE_DIR}/${arg}/"
+					"${CMAKE_CURRENT_BINARY_DIR}/${arg}/"
+					DESTINATION ${CMAKE_INSTALL_DOCDIR}
+					COMPONENT doc)
+			else()
+				install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/${arg}"
+					DESTINATION ${CMAKE_INSTALL_DOCDIR}
+					COMPONENT doc)
+				list(APPEND TARG_DOCS "${CMAKE_CURRENT_SOURCE_DIR}/${arg}")
+			endif()
+		else()
+			if(IS_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${arg}")
+				install(DIRECTORY
+					"${CMAKE_CURRENT_BINARY_DIR}/${arg}/"
+					DESTINATION ${CMAKE_INSTALL_DOCDIR}
+					COMPONENT doc)
+			else()
+				install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${arg}"
+					DESTINATION ${CMAKE_INSTALL_DOCDIR}
+					COMPONENT doc)
+				list(APPEND TARG_DOCS "${CMAKE_CURRENT_BINARY_DIR}/${arg}")
+			endif()
+		endif()
+	endforeach()
+
+	# cpack variables
+	if(TARG_DOCS)
+		list(GET TARG_DOCS 0 TARG_FIRST)
+		if(NOT DEFINED CPACK_PACKAGE_DESCRIPTION_FILE)
+			set(CPACK_PACKAGE_DESCRIPTION_FILE ${TARG_FIRST}
+				PARENT_SCOPE)
+		endif()
+		if(NOT DEFINED CPACK_RESOURCE_FILE_README)
+			set(CPACK_RESOURCE_FILE_README ${TARG_FIRST}
+				PARENT_SCOPE)
+		endif()
+	endif()
 endfunction()
 
