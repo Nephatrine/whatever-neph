@@ -1,5 +1,53 @@
 set(WHATEVER_HAVE_GENERATE ON)
 
+if(NOT DEFINED WHATEVER_CMAKE_DIR)
+	set(WHATEVER_CMAKE_DIR ${CMAKE_CURRENT_LIST_DIR}
+		CACHE STRING "WhatEver Directory")
+endif()
+
+if(NOT DEFINED WHATEVER_CACHE_DIR)
+	set(WHATEVER_CACHE_DIR "${CMAKE_CURRENT_BINARY_DIR}/downloads"
+		CACHE STRING "downloaded file location")
+endif()
+
+# ------------------------------
+# we_download_unicode
+# download unicode files
+#
+
+function(we_download_unicode VAR version)
+	if(NOT DEFINED PYTHON_EXECUTABLE)
+		message(FATAL_ERROR "No Python Executable Found")
+	endif()
+
+	file(MAKE_DIRECTORY ${WHATEVER_CACHE_DIR})
+	foreach(arg ${ARGN})
+
+		# get output filename
+		get_filename_component(FILE_SLUG ${arg} NAME_WE)
+		get_filename_component(FILE_TYPE ${arg} EXT)
+		if("${FILE_SLUG}" MATCHES "%s")
+			string(REPLACE "%s" "-${version}"
+				FILE_OUT "${WHATEVER_CACHE_DIR}/${FILE_SLUG}${FILE_TYPE}")
+		else()
+			set(FILE_OUT "${WHATEVER_CACHE_DIR}/${FILE_SLUG}-${version}${FILE_TYPE}")
+		endif()
+		list(APPEND FUNC_OUTS ${FILE_OUT})
+
+		# download targets
+		add_custom_command(OUTPUT ${FILE_OUT}
+			COMMAND ${PYTHON_EXECUTABLE}
+			ARGS "${WHATEVER_CMAKE_DIR}/Tools/we_download_unicode.py"
+			     "${FILE_SLUG}${FILE_TYPE}" ${version}
+			DEPENDS "${WHATEVER_CMAKE_DIR}/Tools/we_download_unicode.py"
+			COMMENT "[PYTHON] Downloading ${FILE_OUT}"
+			WORKING_DIRECTORY ${WHATEVER_CACHE_DIR})
+	endforeach()
+
+	set(${VAR} ${${VAR}} ${FUNC_OUTS}
+		PARENT_SCOPE)
+endfunction()
+
 # ------------------------------
 # we_generate_from_script
 # use script to create generated files
