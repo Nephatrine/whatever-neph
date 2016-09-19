@@ -35,7 +35,6 @@ function(we_target_add_cflags)
 		elseif("${arg}" STREQUAL "INTERFACE")
 			set(FUNC_MODE INTERFACE)
 
-
 		# target list
 		elseif("${FUNC_MODE}" STREQUAL "TARGET")
 			list(APPEND SELECTED_TARGETS ${arg})
@@ -207,22 +206,16 @@ function(we_target_add_paths)
 		# target list
 		elseif("${FUNC_MODE}" STREQUAL "TARGET")
 			list(APPEND SELECTED_TARGETS ${arg})
-
-		# include paths
 		else()
 
-			# strip cmake paths so we don't double up
+			# include paths
 			if("${FUNC_PATH}" STREQUAL "_INTERNAL")
-				string(REGEX REPLACE "^${CMAKE_CURRENT_SOURCE_DIR}" "" arg ${arg})
-				string(REGEX REPLACE "^${CMAKE_CURRENT_BINARY_DIR}" "" arg ${arg})
-
 				if("${FUNC_MODE}" STREQUAL "PRIVATE")
 					set(arg "${CMAKE_CURRENT_SOURCE_DIR}/${arg}" "${CMAKE_CURRENT_BINARY_DIR}/${arg}")
 				else()
 					list(APPEND INSTALL_PATHS ${arg})
 				endif()
 			endif()
-
 			list(APPEND ${FUNC_MODE}_PATHS${FUNC_PATH} ${arg})
 		endif()
 	endforeach()
@@ -344,7 +337,7 @@ function(we_target_build_library VAR library soversion)
 		elseif("${FUNC_MODE}" STREQUAL "EXPORT")
 			list(APPEND TARG_INCLUDE ${arg})
 			if(NOT TARG_EXPORT)
-				set(TARG_EXPORT ${arg})
+				set(TARG_EXPORT "${CMAKE_CURRENT_BINARY_DIR}/${arg}")
 			endif()
 		elseif("${FUNC_MODE}" STREQUAL "TAG")
 			set(TARG_TAG ${arg})
@@ -447,11 +440,9 @@ function(we_target_build_library VAR library soversion)
 	# generate export header
 	if(TARG_EXPORT)
 		string(TOLOWER "${library}" TARG_LOWER)
-		string(REGEX REPLACE "^${CMAKE_CURRENT_BINARY_DIR}" "" TARG_EXPORT ${TARG_EXPORT})
-		set(TARG_EXPORT "${CMAKE_CURRENT_BINARY_DIR}/${TARG_EXPORT}")
+		we_target_add_paths(${TARG_ALL} PUBLIC ${TARG_INCLUDE} TAG ${TARG_TAG})
 		generate_export_header(${library} BASE_NAME ${library}
 			EXPORT_FILE_NAME "${TARG_EXPORT}/${TARG_LOWER}_api.h")
-		we_target_add_paths(${TARG_ALL} PUBLIC ${TARG_INCLUDE} TAG ${TARG_TAG})
 	endif()
 
 	set(${VAR} ${${VAR}} ${TARG_ALL}
@@ -489,10 +480,6 @@ set(CPACK_COMPONENT_LICENSE_GROUP dev)
 
 function(we_target_list_license)
 	foreach(arg ${ARGN})
-		# make sure we don't double up on these paths
-		string(REGEX REPLACE "^${CMAKE_CURRENT_BINARY_DIR}" "" arg ${arg})
-		string(REGEX REPLACE "^${CMAKE_CURRENT_SOURCE_DIR}" "" arg ${arg})
-
 		# check if it is a directory and where it is located
 		if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${arg}")
 			if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${arg}")
@@ -506,11 +493,11 @@ function(we_target_list_license)
 				install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/${arg}"
 					DESTINATION ${CMAKE_INSTALL_DOCDIR}
 					COMPONENT license)
+				list(APPEND TARG_DOCS "${CMAKE_CURRENT_SOURCE_DIR}/${arg}")
 			endif()
 		else()
 			if(IS_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${arg}")
-				install(DIRECTORY
-					"${CMAKE_CURRENT_BINARY_DIR}/${arg}/"
+				install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${arg}/"
 					DESTINATION ${CMAKE_INSTALL_DOCDIR}
 					COMPONENT license)
 			else()
@@ -541,10 +528,6 @@ set(CPACK_COMPONENT_DOC_DISPLAY_NAME "Documentation")
 
 function(we_target_list_docs)
 	foreach(arg ${ARGN})
-		# make sure we don't double up on these paths
-		string(REGEX REPLACE "^${CMAKE_CURRENT_BINARY_DIR}" "" arg ${arg})
-		string(REGEX REPLACE "^${CMAKE_CURRENT_SOURCE_DIR}" "" arg ${arg})
-
 		# check if it is a directory and where it is located
 		if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${arg}")
 			if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${arg}")
@@ -562,8 +545,7 @@ function(we_target_list_docs)
 			endif()
 		else()
 			if(IS_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${arg}")
-				install(DIRECTORY
-					"${CMAKE_CURRENT_BINARY_DIR}/${arg}/"
+				install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${arg}/"
 					DESTINATION ${CMAKE_INSTALL_DOCDIR}
 					COMPONENT doc)
 			else()
