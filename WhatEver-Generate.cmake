@@ -34,7 +34,7 @@ function(we_download_unicode VAR version)
 		endif()
 		list(APPEND FUNC_OUTS ${FILE_OUT})
 
-		# download targets
+		# run script
 		add_custom_command(OUTPUT ${FILE_OUT}
 			COMMAND ${PYTHON_EXECUTABLE}
 			ARGS "${WHATEVER_CMAKE_DIR}/Tools/we_download_unicode.py"
@@ -54,21 +54,17 @@ endfunction()
 #
 
 function(we_generate_from_script VAR script)
-	# strip paths so we don't double up on them
-	string(REGEX REPLACE "^${CMAKE_CURRENT_BINARY_DIR}" "" script ${script})
-	string(REGEX REPLACE "^${CMAKE_CURRENT_SOURCE_DIR}" "" script ${script})
+	# for easy script reference
+	set(FUNC_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/${script}")
+	foreach(script_path ${CMAKE_CURRENT_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/config"
+			"${CMAKE_CURRENT_SOURCE_DIR}/config/scripts")
+		if(EXISTS "${script_path}/${script}")
+			set(FUNC_SCRIPT "${script_path}/${script}")
+		endif()
+	endforeach()
+	list(APPEND FUNC_ARGS ${FUNC_SCRIPT})
+	list(APPEND FUNC_DEPS ${FUNC_SCRIPT})
 
-	# determine where script resides
-	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/config/scripts/${script}")
-		set(script "${CMAKE_CURRENT_SOURCE_DIR}/config/scripts/${script}")
-	elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${script}")
-		set(script "${CMAKE_CURRENT_SOURCE_DIR}/${script}")
-	else()
-		set(script "${CMAKE_CURRENT_BINARY_DIR}/${script}")
-	endif()
-
-	list(APPEND FUNC_ARGS ${script})
-	list(APPEND FUNC_DEPS ${script})
 	set(FUNC_MODE ARGOUT)
 	foreach(arg ${ARGN})
 
@@ -79,25 +75,19 @@ function(we_generate_from_script VAR script)
 			set(FUNC_MODE DEPS)
 		elseif("${arg}" STREQUAL "OUTPUT")
 			set(FUNC_MODE OUTS)
-
 		else()
+
 			# output and input files
 			if("${FUNC_MODE}" STREQUAL "ARGOUT" OR "${FUNC_MODE}" STREQUAL "OUTS")
-				string(REGEX REPLACE "^${CMAKE_CURRENT_BINARY_DIR}" "" arg ${arg})
 				set(arg "${CMAKE_CURRENT_BINARY_DIR}/${arg}")
-				list(APPEND FUNC_OUTS ${arg})
-				
 				get_filename_component(FUNC_DIR ${arg} DIRECTORY)
 				list(APPEND FUNC_DIRS ${FUNC_DIR})
+				list(APPEND FUNC_OUTS ${arg})
 			elseif("${FUNC_MODE}" STREQUAL "DEPS")
-				string(REGEX REPLACE "^${CMAKE_CURRENT_BINARY_DIR}" "" arg ${arg})
-				string(REGEX REPLACE "^${CMAKE_CURRENT_SOURCE_DIR}" "" arg ${arg})
-
 				if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${arg}")
-					list(APPEND FUNC_DEPS "${CMAKE_CURRENT_SOURCE_DIR}/${arg}")
-				else()
-					list(APPEND FUNC_DEPS "${CMAKE_CURRENT_BINARY_DIR}/${arg}")
+					set(arg "${CMAKE_CURRENT_SOURCE_DIR}/${arg}")
 				endif()
+				list(APPEND FUNC_DEPS ${arg})
 			endif()
 
 			# script arguments
@@ -121,7 +111,7 @@ function(we_generate_from_script VAR script)
 	endif()
 
 	# determine script type
-	get_filename_component(SCRIPT_TYPE ${script} EXT)
+	get_filename_component(SCRIPT_TYPE ${FUNC_SCRIPT} EXT)
 	if("${SCRIPT_TYPE}" STREQUAL ".py")
 		if(NOT DEFINED PYTHON_EXECUTABLE)
 			message(FATAL_ERROR "No Python Executable Found")
@@ -135,19 +125,16 @@ function(we_generate_from_script VAR script)
 		message(FATAL_ERROR "Unknown Script Type: ${SCRIPT_TYPE}")
 	endif()
 
-	message(STATUS "args: ${FUNC_ARGS}")
-	message(STATUS "deps: ${FUNC_DEPS}")
-	message(STATUS "outs: ${FUNC_OUTS}")
-
 	# add custom command
 	add_custom_command(OUTPUT ${FUNC_OUTS}
 		COMMAND ${FUNC_EXEC}
 		ARGS ${FUNC_ARGS}
 		DEPENDS ${FUNC_DEPS}
-		COMMENT "[${FUNC_DESC}] Running ${script}"
+		COMMENT "[${FUNC_DESC}] Running ${FUNC_SCRIPT}"
 		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 	set(${VAR} ${${VAR}} ${FUNC_OUTS}
 		PARENT_SCOPE)
 endfunction()
+
 
