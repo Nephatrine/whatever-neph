@@ -271,6 +271,8 @@ function(we_target_build_executable VAR executable)
 			set(FUNC_MODE SOURCE)
 		elseif("${arg}" STREQUAL "LIBS")
 			set(FUNC_MODE LIBS)
+		elseif("${arg}" STREQUAL "NO_INSTALL")
+			set(NO_INSTALL ON)
 
 		#get lists
 		elseif("${FUNC_MODE}" STREQUAL "SOURCE")
@@ -293,11 +295,13 @@ function(we_target_build_executable VAR executable)
 	endif()
 
 	# install target
-	install(TARGETS ${TARG_NAME}
-		COMPONENT binary
-		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+	if(NOT NO_INSTALL)
+		install(TARGETS ${TARG_NAME}
+			COMPONENT binary
+			RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+	endif()
 
-	set(${VAR}_PROGRAM ${${VAR}_PROGRAM} ${TARG_NAME}
+	set(${VAR}_EXECUTABLE ${${VAR}_EXECUTABLE} ${TARG_NAME}
 		PARENT_SCOPE)
 	set(${VAR} ${${VAR}} ${TARG_NAME}
 		PARENT_SCOPE)
