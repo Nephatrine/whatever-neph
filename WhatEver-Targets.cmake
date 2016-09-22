@@ -394,7 +394,7 @@ function(we_target_build_library VAR library soversion)
 
 		# link libraries
 		if(TARG_LIBS)
-			target_link_libraries(${TARG_NAME} PUBLIC ${TARG_LIBS})
+			target_link_libraries(${TARG_STATIC} PUBLIC ${TARG_LIBS})
 		endif()
 
 		list(APPEND TARG_ALL ${TARG_STATIC})
@@ -433,7 +433,7 @@ function(we_target_build_library VAR library soversion)
 
 		# link libraries
 		if(TARG_LIBS)
-			target_link_libraries(${TARG_NAME} PRIVATE ${TARG_LIBS})
+			target_link_libraries(${TARG_SHARED} PRIVATE ${TARG_LIBS})
 		endif()
 
 		list(APPEND TARG_ALL ${TARG_SHARED})
