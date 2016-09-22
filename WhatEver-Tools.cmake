@@ -3,15 +3,15 @@ find_package(ClangExtras)
 set(WHATEVER_HAVE_TOOLS ON)
 
 # ------------------------------
-# we_tool_get_libraries
+# we_helper_linked_libs
 # helper function
 #
 
-function(we_tool_get_libraries VAR target)
+function(we_helper_linked_libs VAR target)
 	get_property(TIDY_TARGET_LIBS TARGET ${target} PROPERTY LINK_LIBRARIES)
 	foreach(linklib ${TIDY_TARGET_LIBS})
 		if(TARGET ${linklib})
-			we_tool_get_libraries(THESE_LIBS ${linklib})
+			we_helper_linked_libs(THESE_LIBS ${linklib})
 			list(APPEND LINKED_LIBS ${linklib} ${THESE_LIBS})
 		endif()
 	endforeach()
@@ -26,17 +26,18 @@ endfunction()
 
 function(we_tool_clang_format custom)
 	foreach(arg ${ARGN})
-		get_property(TIDY_TARGET_SOURCES TARGET ${arg} PROPERTY SOURCES)
-		list(APPEND TIDY_SOURCES ${TIDY_TARGET_SOURCES})
+		get_property(FORMAT_TARGET_SOURCES TARGET ${arg} PROPERTY SOURCES)
+		list(APPEND FORMAT_SOURCES ${FORMAT_TARGET_SOURCES})
+		list(APPEND FORMAT_TARGETS ${arg})
 	endforeach()
-	list(REMOVE_DUPLICATES TIDY_SOURCES)
+	list(REMOVE_DUPLICATES FORMAT_SOURCES)
 
 	if(DEFINED CLANG_FORMAT_EXECUTABLE)
 		add_custom_target(${custom}
-			COMMAND ${CLANG_FORMAT_EXECUTABLE} -i ${TIDY_SOURCES}
-			DEPENDS ${TIDY_SOURCES}
+			COMMAND ${CLANG_FORMAT_EXECUTABLE} -i ${FORMAT_SOURCES}
+			DEPENDS ${FORMAT_SOURCES}
 			WORKING_DIRECTORY ${CMAKE_CURRENT_BIN_DIR}
-			COMMENT "[CLANG] Formatting Code")
+			COMMENT "[CLANG-FORMAT] formatting: ${FORMAT_TARGETS}")
 	endif()
 endfunction()
 
@@ -45,16 +46,11 @@ endfunction()
 # run clang-tidy analysis
 #
 
-function(we_tool_clang_tidy custom target)
-	# remove any checks defined
-	foreach(arg ${ARGN})
-		set(TIDY_FLAGS "${TIDY_FLAGS},${arg}")
-	endforeach()
-
+function(we_helper_clang_tidy custom target)
 	# get all include directories and definitions needed
 	get_property(TIDY_TARGET_INCLUDES TARGET ${target} PROPERTY INCLUDE_DIRECTORIES)
 	get_property(TIDY_TARGET_DEFINES TARGET ${target} PROPERTY COMPILE_DEFINITIONS)
-	we_tool_get_libraries(TIDY_TARGET_LIBS ${target})
+	we_helper_linked_libs(TIDY_TARGET_LIBS ${target})
 	foreach(linklib ${TIDY_TARGET_LIBS})
 		if(TARGET ${linklib})
 			get_property(TIDY_LIBRARY_INCLUDES TARGET ${linklib} PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
@@ -79,8 +75,8 @@ function(we_tool_clang_tidy custom target)
 	endforeach()
 
 	# add custom target
-	get_property(TIDY_SOURCES_ALL TARGET ${target} PROPERTY SOURCES)
-	foreach(source ${TIDY_SOURCES_ALL})
+	get_property(TIDY_TARGET_SOURCES TARGET ${target} PROPERTY SOURCES)
+	foreach(source ${TIDY_TARGET_SOURCES})
 		if("${source}" MATCHES "\\.c$" OR
 				"${source}" MATCHES "\\.C$" OR
 				"${source}" MATCHES "\\.cc$" OR
@@ -92,10 +88,20 @@ function(we_tool_clang_tidy custom target)
 	endforeach()
 	if(DEFINED CLANG_TIDY_EXECUTABLE)
 		add_custom_target(${custom}
-			COMMAND ${CLANG_TIDY_EXECUTABLE} ${TIDY_SOURCES} -header-filter=.* -checks=*${TIDY_FLAGS} -- ${TIDY_INCLUDES} ${TIDY_DEFINES}
-			DEPENDS ${TIDY_SOURCES}
+			COMMAND ${CLANG_TIDY_EXECUTABLE} ${TIDY_SOURCES} -header-filter=.* -- ${TIDY_INCLUDES} ${TIDY_DEFINES}
+			DEPENDS ${TIDY_TARGET_SOURCES}
 			WORKING_DIRECTORY ${CMAKE_CURRENT_BIN_DIR}
-			COMMENT "[CLANG-TIDY] Analyzing ${target}")
+			COMMENT "[CLANG-TIDY] analyzing ${target}")
 	endif()
 endfunction()
 
+function(we_tool_clang_tidy custom)
+	if(DEFINED CLANG_TIDY_EXECUTABLE)
+		foreach(arg ${ARGN})
+			we_helper_clang_tidy(${custom}_${arg} ${arg})
+			list(APPEND TIDY_DEPS "${custom}_${arg}")
+		endforeach()
+		add_custom_target(${custom})
+		add_dependencies(${custom} ${TIDY_DEPS})
+	endif()
+endfunction()
