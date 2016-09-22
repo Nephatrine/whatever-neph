@@ -1,0 +1,9 @@
+find_program(CLANG_FORMAT_EXECUTABLE NAMES clang-format)
+find_program(CLANG_TIDY_EXECUTABLE NAMES clang-tidy)
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(ClangFormat DEFAULT_MSG CLANG_FORMAT_EXECUTABLE)
+find_package_handle_standard_args(ClangTidy DEFAULT_MSG CLANG_TIDY_EXECUTABLE)
+
+mark_as_advanced(CLANG_FORMAT_EXECUTABLE CLANG_TIDY_EXECUTABLE)
+
