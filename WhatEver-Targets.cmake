@@ -446,7 +446,7 @@ function(we_target_build_library VAR library soversion)
 		string(TOLOWER "${library}" TARG_LOWER)
 		we_target_add_paths(${TARG_ALL} PUBLIC ${TARG_INCLUDE} TAG ${TARG_TAG})
 		generate_export_header(${library} BASE_NAME ${library}
-			EXPORT_FILE_NAME "${TARG_EXPORT}/${TARG_LOWER}_api.h")
+			EXPORT_FILE_NAME "${TARG_EXPORT}/${TARG_LOWER}_export.h")
 	endif()
 
 	set(${VAR} ${${VAR}} ${TARG_ALL}
