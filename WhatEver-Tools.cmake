@@ -77,8 +77,10 @@ function(we_helper_clang_tidy custom target)
 			list(APPEND TIDY_DEFINES "-D${define}")
 		endforeach()
 
-		# greater accuracy
-		message(WARNING "Consider using -DCMAKE_EXPORT_COMPILE_COMMANDS=ON for greater clang-tidy accuracy.")
+		# greater accuracy warning
+		if(NOT CMAKE_EXPORT_COMPILE_COMMANDS)
+			message(WARNING "Consider using -DCMAKE_EXPORT_COMPILE_COMMANDS=ON for greater clang-tidy accuracy.")
+		endif()
 		set(TIDY_BUILD "--")
 	endif()
 
