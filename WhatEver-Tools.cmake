@@ -36,7 +36,7 @@ function(we_tool_clang_format custom)
 		add_custom_target(${custom}
 			COMMAND ${CLANG_FORMAT_EXECUTABLE} -i ${FORMAT_SOURCES}
 			DEPENDS ${FORMAT_SOURCES}
-			WORKING_DIRECTORY ${CMAKE_CURRENT_BIN_DIR}
+			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 			COMMENT "[CLANG-FORMAT] formatting: ${FORMAT_TARGETS}")
 	endif()
 endfunction()
@@ -47,32 +47,40 @@ endfunction()
 #
 
 function(we_helper_clang_tidy custom target)
-	# get all include directories and definitions needed
-	get_property(TIDY_TARGET_INCLUDES TARGET ${target} PROPERTY INCLUDE_DIRECTORIES)
-	get_property(TIDY_TARGET_DEFINES TARGET ${target} PROPERTY COMPILE_DEFINITIONS)
-	we_helper_linked_libs(TIDY_TARGET_LIBS ${target})
-	foreach(linklib ${TIDY_TARGET_LIBS})
-		if(TARGET ${linklib})
-			get_property(TIDY_LIBRARY_INCLUDES TARGET ${linklib} PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
-			get_property(TIDY_LIBRARY_DEFINES TARGET ${linklib} PROPERTY INTERFACE_COMPILE_DEFINITIONS)
-			list(APPEND TIDY_TARGET_INCLUDES ${TIDY_LIBRARY_INCLUDES})
-			list(APPEND TIDY_TARGET_DEFINES ${TIDY_LIBRARY_DEFINES})
-		endif()
-	endforeach()
+	if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json")
+		set(TIDY_BUILD "-p=${CMAKE_CURRENT_BINARY_DIR}")
+	else()
+		# get all include directories and definitions needed
+		get_property(TIDY_TARGET_INCLUDES TARGET ${target} PROPERTY INCLUDE_DIRECTORIES)
+		get_property(TIDY_TARGET_DEFINES TARGET ${target} PROPERTY COMPILE_DEFINITIONS)
+		we_helper_linked_libs(TIDY_TARGET_LIBS ${target})
+		foreach(linklib ${TIDY_TARGET_LIBS})
+			if(TARGET ${linklib})
+				get_property(TIDY_LIBRARY_INCLUDES TARGET ${linklib} PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+				get_property(TIDY_LIBRARY_DEFINES TARGET ${linklib} PROPERTY INTERFACE_COMPILE_DEFINITIONS)
+				list(APPEND TIDY_TARGET_INCLUDES ${TIDY_LIBRARY_INCLUDES})
+				list(APPEND TIDY_TARGET_DEFINES ${TIDY_LIBRARY_DEFINES})
+			endif()
+		endforeach()
 
-	# filter out generator statements
-	foreach(incdir ${TIDY_TARGET_INCLUDES})
-		if(NOT "${incdir}" MATCHES "INSTALL_INTERFACE")
-			string(REPLACE "$<BUILD_INTERFACE:" "" INCDIR ${incdir})
-			string(REPLACE ">" "" INCDIR ${incdir})
-			list(APPEND TIDY_INCLUDES "-I${incdir}")
-		endif()
-	endforeach()
+		# filter out generator statements
+		foreach(incdir ${TIDY_TARGET_INCLUDES})
+			if(NOT "${incdir}" MATCHES "INSTALL_INTERFACE")
+				string(REPLACE "$<BUILD_INTERFACE:" "" INCDIR ${incdir})
+				string(REPLACE ">" "" INCDIR ${incdir})
+				list(APPEND TIDY_INCLUDES "-I${incdir}")
+			endif()
+		endforeach()
 
-	# get definitions in proper format
-	foreach(define ${TIDY_TARGET_DEFINES})
-		list(APPEND TIDY_DEFINES "-D${define}")
-	endforeach()
+		# get definitions in proper format
+		foreach(define ${TIDY_TARGET_DEFINES})
+			list(APPEND TIDY_DEFINES "-D${define}")
+		endforeach()
+
+		# greater accuracy
+		message(WARNING "Consider using -DCMAKE_EXPORT_COMPILE_COMMANDS=ON for greater clang-tidy accuracy.")
+		set(TIDY_BUILD "--")
+	endif()
 
 	# add custom target
 	get_property(TIDY_TARGET_SOURCES TARGET ${target} PROPERTY SOURCES)
@@ -88,9 +96,9 @@ function(we_helper_clang_tidy custom target)
 	endforeach()
 	if(DEFINED CLANG_TIDY_EXECUTABLE)
 		add_custom_target(${custom}
-			COMMAND ${CLANG_TIDY_EXECUTABLE} ${TIDY_SOURCES} -header-filter=.* -- ${TIDY_INCLUDES} ${TIDY_DEFINES}
+			COMMAND ${CLANG_TIDY_EXECUTABLE} ${TIDY_SOURCES} ${TIDY_BUILD} ${TIDY_INCLUDES} ${TIDY_DEFINES}
 			DEPENDS ${TIDY_TARGET_SOURCES}
-			WORKING_DIRECTORY ${CMAKE_CURRENT_BIN_DIR}
+			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 			COMMENT "[CLANG-TIDY] analyzing ${target}")
 	endif()
 endfunction()
@@ -105,3 +113,4 @@ function(we_tool_clang_tidy custom)
 		add_dependencies(${custom} ${TIDY_DEPS})
 	endif()
 endfunction()
+
