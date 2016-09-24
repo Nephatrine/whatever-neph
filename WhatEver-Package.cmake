@@ -28,7 +28,7 @@ set(WHATEVER_HAVE_PACKAGE ON)
 function(we_package_detect_arch VAR)
 	try_run(run_result_unused compile_result_unused
 		${CMAKE_CURRENT_BINARY_DIR}
-		"${WHATEVER_CMAKE_DIR}/Tools/detect-arch.c"
+		"${WHATEVER_CMAKE_DIR}/Tools/we_detect_arch.c"
 		COMPILE_OUTPUT_VARIABLE ARCH)
 	string(REGEX MATCH "CMAKE_ARCH ([a-zA-Z0-9_]+)" ARCH "${ARCH}")
 	string(REPLACE "CMAKE_ARCH " "" ARCH "${ARCH}")
