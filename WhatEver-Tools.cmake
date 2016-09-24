@@ -78,7 +78,7 @@ function(we_helper_clang_tidy custom target)
 		endforeach()
 
 		# greater accuracy warning
-		if(NOT CMAKE_EXPORT_COMPILE_COMMANDS)
+		if(CLANG_TIDY_EXECUTABLE AND NOT CMAKE_EXPORT_COMPILE_COMMANDS)
 			message(WARNING "Consider using -DCMAKE_EXPORT_COMPILE_COMMANDS=ON for greater clang-tidy accuracy.")
 		endif()
 		set(TIDY_BUILD "--")
