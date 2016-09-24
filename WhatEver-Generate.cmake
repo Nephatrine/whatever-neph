@@ -77,6 +77,11 @@ function(we_generate_from_script VAR script)
 			set(FUNC_MODE OUTS)
 		else()
 
+			# script arguments
+			if("${FUNC_MODE}" STREQUAL "ARGOUT" OR "${FUNC_MODE}" STREQUAL "ARGS")
+				list(APPEND FUNC_ARGS ${arg})
+			endif()
+
 			# output and input files
 			if("${FUNC_MODE}" STREQUAL "ARGOUT" OR "${FUNC_MODE}" STREQUAL "OUTS")
 				set(arg "${CMAKE_CURRENT_BINARY_DIR}/${arg}")
@@ -88,11 +93,6 @@ function(we_generate_from_script VAR script)
 					set(arg "${CMAKE_CURRENT_SOURCE_DIR}/${arg}")
 				endif()
 				list(APPEND FUNC_DEPS ${arg})
-			endif()
-
-			# script arguments
-			if("${FUNC_MODE}" STREQUAL "ARGOUT" OR "${FUNC_MODE}" STREQUAL "ARGS")
-				list(APPEND FUNC_ARGS ${arg})
 			endif()
 
 			# only one argument is inherently the output name
